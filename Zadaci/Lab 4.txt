@@ -1,0 +1,24 @@
+Zadaci
+1. Napisati upit koji će prikazati naziv zaposlenog , šifru i naziv odjela za sve
+zaposlene.
+2. Napisati jedinstvenu listu svih poslova iz odjela 30.
+3. Napisati upit koji će prikazati naziv zaposlenog, naziv odjela i lokaciju za sve
+zaposlene koji ne primaju dodataka na platu.
+4. Napisati upit koji će prikazati naziv zaposlenog i naziv odjela za sve zaposlene koji u
+imenu sadrže slovo A na bilo kom mjestu.
+5. Napisati upit koji će prikazati naziv, posao, broj i naziv odjela za sve zaposlene koji
+rade u DALLAS-u.
+6. Napisati upit koji će prikazati naziv zaposlenog, naziv šefa i grad šefa u kojem radi.
+Za labele kolona uzeti Naziv zaposlenog, Šifra zaposlenog, Naziv šefa, Šifra šefa,
+Grad šefa, respektivno.
+7. Modificirati upit pod rednim brojem šest, da prikazuje i manager-a King-a koji nema
+predpostavljenog.
+8. Napisati upit koji će prikazati naziv zaposlenog, šifru odjela, i sve zaposlene koji
+rade u istom odjelu kao i uzeti zaposlenik. Za kolone uzeti odgovarajuće labele.
+9. Napisati upit koji će prikazati naziv, posao, naziv odjela, platu i stepene plate za sve
+zaposlene kod kojih stepen plate nije u rasponu kada se na platu zaposlenog doda
+dodatak na platu.
+10. Napisati upit koji će prikazati naziv i datum zaposlenja za sve radnike koji su
+zaposeleni poslije Blake-a.
+11. Napisati upit koji će prikazati naziv i datum zaposlenja zaposlenog, naziv i datum
+zaposlenja šefa zaposlenog, za sve zaposlene koji su se zaposlili prije svog šefa. 
