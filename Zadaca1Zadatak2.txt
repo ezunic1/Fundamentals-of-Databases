@@ -1,0 +1,97 @@
+ALTER SESSION SET CURRENT_SCHEMA = erd;
+--1.
+SELECT Sum(Length(Drzava)*7+Length(Grad)*7+Length(Kontinent)*7)*MAX(BrojLokacija) FROM
+(SELECT Nvl(d.naziv, 'Nema drzave') Drzava, Nvl(g.naziv, 'Nema grada') Grad, Count(l.lokacija_id) BrojLokacija, k.naziv Kontinent
+FROM kontinent k, grad g, drzava d, lokacija l
+WHERE k.kontinent_id = d.kontinent_id (+)
+      AND g.drzava_id (+)= d.drzava_id
+      AND g.grad_id = l.grad_id  (+)
+GROUP BY k.naziv, g.naziv, d.naziv);
+
+--2.
+SELECT SUM(LENGTH(naziv)*7) FROM
+(SELECT p.naziv AS Naziv
+FROM pravno_lice p, ugovor_za_pravno_lice u
+WHERE p.pravno_lice_id = u.pravno_lice_id
+AND Mod(To_Char(u.datum_potpisivanja, 'YYYY'), 2) = 0
+AND u.datum_raskidanja IS null);
+
+--3.
+SELECT SUM(Length(Drzava)*7 + Length(proizvod)*7 + kolicina_proizvoda*7) FROM
+(SELECT d.naziv Drzava, p.naziv Proizvod, k.kolicina_proizvoda Kolicina_proizvoda
+FROM drzava d, grad g, lokacija l, skladiste s, kolicina k, proizvod p
+WHERE d.drzava_id = g.drzava_id AND
+      g.grad_id = l.grad_id AND
+      l.lokacija_id = s.lokacija_id AND
+      k.skladiste_id = s.skladiste_id AND
+      k.proizvod_id = p.proizvod_id AND
+      k.kolicina_proizvoda > 50 AND
+      d.naziv NOT LIKE '%s%s%');
+
+--4.
+SELECT Sum(Length(naziv)*7) FROM
+(SELECT DISTINCT (p.naziv), p.broj_mjeseci_garancije
+FROM proizvod p, narudzba_proizvoda n, popust d
+WHERE p.proizvod_id = n.proizvod_id AND
+      n.popust_id = d.popust_id AND
+      Mod(p.broj_mjeseci_garancije, 3) = 0);
+
+--5.
+SELECT Sum(Length("ime i prezime")*7+Length("Naziv odjela")*7)
+FROM
+(SELECT f.ime || ' ' || f.prezime AS "ime i prezime", o.naziv "Naziv odjela", 19784 indeks
+FROM uposlenik u, odjel o, fizicko_lice f, kupac k
+WHERE u.uposlenik_id = f.fizicko_lice_id AND
+      u.odjel_id = o.odjel_id AND
+      k.kupac_id = f.fizicko_lice_id AND
+      o.sef_id != u.uposlenik_id);
+
+--6.
+SELECT Sum(NARUDZBA_ID*7+cijena*7+postotak*7) FROM
+(SELECT n.narudzba_id AS Narudzba_id, p.cijena Cijena, Nvl(d.postotak, 0)AS Postotak, Nvl(d.postotak,0)/100 AS PostotakRealni
+FROM narudzba_proizvoda n, proizvod p, popust d
+WHERE (p.cijena *  0.01 * Nvl(d.postotak,0)) < 200 AND
+      n.proizvod_id = p.proizvod_id AND
+      n.popust_id = d.popust_id(+));
+
+--7.
+SELECT Sum(Length("Kategorija")*7+Length("Nadkategorija")*7) FROM
+(SELECT  Decode(k.kategorija_id, 1, 'Komp Oprema',
+                                NULL, 'Nema Kategorija',
+                                k.naziv) "Kategorija",
+         Decode(nk.kategorija_id, 1, 'Komp Oprema',
+                                  NULL, 'Nema Kategorija',
+                                  nk.naziv) "Nadkategorija"
+FROM kategorija k, kategorija nk
+WHERE k.nadkategorija_id = nk.kategorija_id(+));
+
+--8.
+SELECT Sum(To_Number(To_Char(RASKID,'YYYY'))) * 2 FROM
+(SELECT Nvl(u.datum_raskidanja, Add_Months(datum_potpisivanja, 24)) Raskid
+FROM ugovor_za_pravno_lice u
+WHERE SubStr(u.ugovor_id,1,2) <= 50);
+
+--9.
+SELECT SUM(Length(ime)*7+Length(prezime)*7+Length(Odjel)*7) FROM
+(SELECT f.ime ime, f.prezime prezime,
+       Decode(o.naziv,
+              'Human Resources', 'HUMAN',
+              'Managment', 'MANAGER',
+              'OTHER') Odjel,
+       o.odjel_id odjel_id
+FROM uposlenik u, odjel o, fizicko_lice f
+WHERE f.fizicko_lice_id = u.uposlenik_id AND
+      o.odjel_id = u.odjel_id
+ORDER BY f.ime asc , f.prezime DESC)
+WHERE ROWNUM<2;
+
+
+--10.
+SELECT SUM(Length(Najjeftiniji)*7+ZCijena*7) FROM
+(SELECT DISTINCT p1.naziv Najskuplji, p2.naziv Najjeftiniji, (p1.cijena+p2.cijena) ZCijena
+FROM (SELECT p.kategorija_id, Max(p.cijena) max, Min(p.cijena) min
+	      FROM proizvod p
+	      GROUP BY p.kategorija_id), proizvod p1, proizvod p2
+WHERE p1.cijena=max AND p2.cijena=min
+ORDER BY ZCijena)
+WHERE ROWNUM<4;
