@@ -13,4 +13,10 @@ Ovaj repozitorij sadrži zadatke urađene u sklopu predmeta **Osnove baza podata
      - Agregacione funkcije,
      - Rad sa višestrukim tabelama (JOIN operacije).  
 
+## Kako koristiti
+- Pregledajte **Postavka zadaće 1** za više detalja.
+- Za rješenje prvog zadatka pogledajte **Zadaca1ERD**.  
+- Za rješenje drugog zadatka pogledajte **Zadaca1Zadatak2**. 
 
+## Napomena
+- Ovaj repozitorij je edukativne prirode i namenjen za praksu u radu sa bazama podataka.
