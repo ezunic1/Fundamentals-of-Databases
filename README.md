@@ -4,7 +4,7 @@ Ovaj repozitorij sadrži zadatke urađene u sklopu predmeta **Osnove baza podata
 ## Sadržaj
 1. **Zadatak 1**:  
    - Kreiranje dijagrama entitet-veza (ERD) za zadati problem.
-   - ERD je izrađen koristeći standardne konvencije za modelovanje baza podataka, uz pomoć online alata [Visual Paradigm](https://online.visual-paradigm.com).
+   - ERD je izrađen koristeći standardne konvencije za modeliranje baza podataka, uz pomoć online alata [Visual Paradigm](https://online.visual-paradigm.com).
 
 2. **Zadatak 2**:  
    - Upiti uključuju:
