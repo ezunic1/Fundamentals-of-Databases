@@ -1,5 +1,21 @@
-# Osnove baza podataka
-This repository provides SQL code for various queries related to Oracle's HR demo schema. These exercises are part of my coursework for the Database Fundamentals course at my university. The queries demonstrate different database operations, exploring interactions within tables and relationships in a human resources management setting. An ER diagram for the schema is also included for reference.
+# Fundamentals of Databases  
 
-![Oracle’s Demo HR Schema](hr-ed-with-labels.png)
-https://www.webucator.com/article/oracles-demo-hr-schema/
+This repository contains my assignments and laboratory exercises for the **Fundamentals of Databases** course at the University of Sarajevo, Faculty of Electrical Engineering.  
+The tasks are based on the **Oracle HR demo schema**, and cover different SQL queries and operations that explore tables, relationships, and concepts in human resources management.  
+
+## 📂 Repository Contents  
+- **Assignments** – official coursework tasks  
+- **Laboratory exercises** – SQL practice tasks based on the HR schema  
+- **ER diagram** – schema visualization for reference  
+
+## 🛠 Topics Covered  
+- SQL queries (SELECT, JOIN, GROUP BY, HAVING, ORDER BY)  
+- Subqueries and nested queries  
+- Data definition and manipulation (DDL, DML)  
+- Constraints and relationships  
+- Aggregation and set operations  
+- Schema analysis through ER diagrams  
+
+## 📌 Schema Reference  
+![Oracle’s Demo HR Schema](hr-ed-with-labels.png)  
+[Oracle’s Demo HR Schema Documentation](https://www.webucator.com/article/oracles-demo-hr-schema/)  
