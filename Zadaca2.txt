@@ -1,0 +1,460 @@
+--Zadatak 1:
+ALTER SESSION SET CURRENT_SCHEMA = erd;
+
+--1. Rezultat: 483 
+SELECT Sum(Length(ResNaziv)*7) FROM
+(SELECT DISTINCT p.naziv ResNaziv
+FROM pravno_lice p, fizicko_lice f, lokacija l
+WHERE l.lokacija_id = p.lokacija_id
+      AND f.lokacija_id = l.lokacija_id);
+ 
+--2. Rezultat:  938 
+SELECT Sum(Length(ResNaziv)*7 + Length("Datum Potpisivanja")*7) FROM
+(SELECT DISTINCT to_char(u.datum_potpisivanja,'dd.MM.yyyy')AS "Datum Potpisivanja", pl.naziv AS ResNaziv
+FROM ugovor_za_pravno_lice u, pravno_lice pl, proizvod p, faktura f, narudzba_proizvoda n
+WHERE  u.pravno_lice_id = pl.pravno_lice_id
+       AND u.datum_potpisivanja > (
+        SELECT datum_kupoprodaje
+        FROM (
+            SELECT f.datum_kupoprodaje
+            FROM faktura f, proizvod p, narudzba_proizvoda n
+            WHERE n.faktura_id = f.faktura_id
+                  AND p.proizvod_id = n.proizvod_id
+                  AND p.broj_mjeseci_garancije IS NOT null
+            ORDER BY f.datum_kupoprodaje
+        )
+        WHERE ROWNUM = 1
+));
+ 
+--3. Rezultat: 119
+SELECT Sum(Length(naziv)*7) FROM
+(SELECT p.naziv
+FROM proizvod p
+WHERE p.kategorija_id IN (
+      SELECT p.kategorija_id
+      FROM kategorija k, proizvod p, kolicina kol
+      WHERE k.kategorija_id = p.kategorija_id
+            AND p.proizvod_id = kol.proizvod_id
+      GROUP BY p.kategorija_id
+      HAVING Sum(kol.kolicina_proizvoda) = (
+        SELECT Max (Sum(kolicina_proizvoda))
+        FROM kolicina
+        GROUP BY proizvod_id
+      )
+));
+ 
+--4. Rezultat: 1176  
+SELECT Sum(Length("Proizvod")*7 + Length("Proizvodjac")*7) FROM
+(SELECT p.naziv AS "Proizvod", pl.naziv AS "Proizvodjac"
+FROM proizvod p, proizvodjac pr, pravno_lice pl
+WHERE p.proizvodjac_id = pr.proizvodjac_id
+      AND pr.proizvodjac_id = pl.pravno_lice_id
+      AND pr.proizvodjac_id IN (
+          SELECT p1.proizvodjac_id
+          FROM proizvod p1
+          GROUP BY p1.proizvodjac_id
+          HAVING MAX(p1.cijena) > (
+              SELECT AVG(p2.cijena)
+              FROM proizvod p2
+          )
+));
+ 
+--5. Rezultat: 16093 
+SELECT Sum(Length("Ime i prezime")*7 + "iznos"*7) FROM
+(SELECT f.ime || ' ' || f.prezime AS "Ime i prezime", Sum(fa.iznos) "iznos"
+FROM fizicko_lice f, faktura fa, kupac k, uposlenik u
+WHERE u.uposlenik_id = f.fizicko_lice_id
+      AND f.fizicko_lice_id = k.kupac_id
+      AND fa.kupac_id = k.kupac_id
+      GROUP BY f.ime, f.prezime
+        HAVING round(sum(fa.iznos),2) > ALL (
+          SELECT round(avg(fa.iznos),2)
+          FROM faktura fa, kupac k, fizicko_lice f
+          WHERE f.fizicko_lice_id = k.kupac_id
+          AND k.kupac_id = fa.kupac_id
+          GROUP BY f.ime, f.prezime
+)); 
+ 
+--6. Rezultat:  42
+SELECT Sum(Length("naziv")*7) FROM
+(SELECT pl.naziv "naziv"
+FROM pravno_lice pl, kurirska_sluzba ks, isporuka i, faktura fa, narudzba_proizvoda np, popust p
+WHERE pl.pravno_lice_id = ks.kurirska_sluzba_id
+AND ks.kurirska_sluzba_id = i.kurirska_sluzba_id
+AND i.isporuka_id = fa.isporuka_id
+AND np.faktura_id = fa.faktura_id
+AND np.popust_id = p.popust_id
+AND p.postotak IS NOT null
+GROUP BY pl.naziv
+HAVING Sum(kolicina_jednog_proizvoda) = ( 
+SELECT MAX(suma_kolicine)
+    FROM (
+        SELECT ks.kurirska_sluzba_id, SUM(np.kolicina_jednog_proizvoda) AS suma_kolicine
+        FROM kurirska_sluzba ks, isporuka i, faktura fa, narudzba_proizvoda np, popust p
+        WHERE ks.kurirska_sluzba_id = i.kurirska_sluzba_id
+        AND i.isporuka_id = fa.isporuka_id
+        AND fa.faktura_id = np.faktura_id
+        AND np.popust_id = p.popust_id
+        AND p.postotak IS NOT NULL
+        GROUP BY ks.kurirska_sluzba_id
+    )  
+));
+
+--7. Rezultat: 41321
+SELECT Sum(Length("Kupac")*7 + Round("Usteda")*7) FROM
+(SELECT  f.ime || ' ' || f.prezime AS "Kupac", SUM(na.kolicina_jednog_proizvoda * pr.cijena * p.postotak / 100) AS "Usteda", '19784' AS "Indeks"
+FROM fizicko_lice f, kupac k, faktura fa, popust p, proizvod pr, narudzba_proizvoda na
+WHERE f.fizicko_lice_id = k.kupac_id
+AND k.kupac_id = fa.kupac_id
+AND fa.faktura_id = na.faktura_id
+AND p.popust_id = na.popust_id
+AND pr.proizvod_id = na.proizvod_id
+GROUP BY f.ime, f.prezime);
+ 
+--8. Rezultat:   567
+ SELECT Sum(idisporuke*7 + idkurirske*7) FROM
+(SELECT DISTINCT i.isporuka_id AS idisporuke, ks.kurirska_sluzba_id as idkurirske
+FROM kurirska_sluzba ks, isporuka i, faktura fa, narudzba_proizvoda na, proizvod pr, garancija g, popust p 
+WHERE ks.kurirska_sluzba_id = i.kurirska_sluzba_id
+AND i.isporuka_id = fa.isporuka_id
+AND na.faktura_id = fa.faktura_id
+AND na.popust_id = p.popust_id
+AND na.proizvod_id = pr.proizvod_id
+AND p.postotak IS NOT NULL
+AND pr.broj_mjeseci_garancije IS NOT NULL);
+ 
+--9. Rezultat:  21490
+SELECT Sum(Length(naziv)*7 + cijena*7) FROM
+(SELECT naziv, cijena
+FROM proizvod
+WHERE cijena > (
+        SELECT ROUND(AVG(maks), 2)
+        FROM (SELECT MAX(cijena) AS maks
+            FROM proizvod
+            GROUP BY kategorija_id
+        )
+));
+
+--10. Rezultat:  5712
+SELECT Sum(Length(naziv)*7 + Round(cijena)*7) FROM
+(  SELECT pr.naziv AS naziv, pr.cijena AS cijena
+FROM proizvod pr
+WHERE pr.cijena < ALL (
+    SELECT AVG(p2.cijena)
+    FROM proizvod p2
+    JOIN kategorija k ON p2.kategorija_id = k.kategorija_id
+    WHERE k.kategorija_id NOT IN (
+        SELECT k2.nadkategorija_id
+        FROM kategorija k2
+        WHERE k2.kategorija_id = pr.kategorija_id
+    )
+    GROUP BY k.kategorija_id
+));
+ 
+
+
+-------------------------------------------------------
+--Zadatak 2:
+SELECT * FROM TabelaA;
+SELECT * FROM tabelab;
+SELECT * FROM tabelac;
+CREATE TABLE TabelaA(
+       ID NUMBER NOT NULL,
+       NAZIV VARCHAR2(20),
+       DATUM DATE,
+       CIJELIBROJ NUMBER,
+       REALNIBROJ NUMBER,
+       CONSTRAINT TabelaA_pk PRIMARY KEY(ID),
+       CONSTRAINT cijeli_broj_ck CHECK (cijelibroj < 5 or cijelibroj > 15),
+       CONSTRAINT realni_broj_ck CHECK (realnibroj > 5)
+);
+
+
+CREATE TABLE TabelaB(
+       ID NUMBER  NOT NULL,
+       NAZIV VARCHAR2(20),
+       DATUM DATE,
+       CIJELIBROJ NUMBER,
+       REALNIBROJ NUMBER,
+       FKTABELAA NUMBER NOT null,
+       CONSTRAINT TabelaB_pk PRIMARY KEY (ID),
+       CONSTRAINT TabelaB_fk FOREIGN KEY (FKTABELAA) REFERENCES TabelaA(ID),
+       CONSTRAINT cijeli_broj_uq UNIQUE(CIJELIBROJ)
+);
+
+CREATE TABLE TabelaC(
+       ID NUMBER  NOT NULL,
+       NAZIV VARCHAR2(20) NOT null,
+       DATUM DATE,
+       CIJELIBROJ NUMBER NOT NULL,
+       REALNIBROJ NUMBER,
+       FKTABELAB NUMBER NOT null,
+       CONSTRAINT TabelaC_pk PRIMARY KEY(ID),
+       CONSTRAINT FkCnst FOREIGN KEY(FKTABELAB) REFERENCES TabelaB(ID)
+);
+ALTER TABLE TabelaC MODIFY FKTABELAB NULL; -- posto sam pogrijesio kod constrainta za fktabelab
+
+
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (1, 'tekst', null, null, 6.2);
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (2, NULL, NULL, 3, 5.26) ;
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (3, 'tekst', NULL,1, NULL ) ;
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (4, NULL, NULL, NULL, NULL);
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (5, 'tekst', NULL, 16, 6.78);
+
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (1, NULL,NULL, 1, NULL, 1);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (2, NULL,NULL, 3, NULL, 1);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (3, NULL,NULL, 6, NULL, 2);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (4, NULL,NULL, 11, NULL, 2);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (5, NULL,NULL, 22, NULL, 3);
+
+INSERT INTO TabelaC (id, naziv, datum, cijelibroj, realnibroj, fktabelab)
+VALUES(1, 'YES', NULL, 33, NULL, 4);
+INSERT INTO TabelaC (id, naziv, datum, cijelibroj, realnibroj, fktabelab)
+VALUES(2, 'NO', NULL, 33, NULL, 2);
+INSERT INTO TabelaC (id, naziv, datum, cijelibroj, realnibroj, fktabelab)
+VALUES(3, 'NO', NULL, 55, NULL, 1);
+
+SELECT * FROM TabelaA;
+SELECT * FROM tabelab;
+SELECT * FROM tabelac;
+
+--1. uspjesno dodana
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (6, 'tekst', null, null, 6.20);
+
+--2. nije dodano jer je cijeli broj unique, a vec ima upisana vrijednost 1
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaA)
+VALUES (6, null, null, 1, null, 1);
+
+--3. uspjesno dodana
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaA)
+VALUES (7, null, null, 123, null, 6);
+
+--4. uspjesno dodano, fktabelab smije biti null
+INSERT INTO TabelaC (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaB)
+VALUES (4, 'NO', null, 55, null, null);
+
+--5. uspjesno promijenjena vrijendnost kolone naziv u 2. redu tabelu
+UPDATE TabelaA
+SET naziv = 'tekst'
+WHERE naziv IS NULL
+AND cijeliBroj IS NOT NULL;
+
+--6. ne moze se dropati tabelaB obzirom da je njen ID primarni kljuc tabele C
+DROP TABLE TabelaB;
+
+--7. ne mogu se izbrisati redovi 3 i 4, obzirom da je red 3 strani kljuc u tabeli B
+DELETE FROM TabelaA
+WHERE realniBroj IS NULL;
+
+--8. uspjesno je obrisan red, ova vrijednost nije bila povezana sa tabelom B
+DELETE FROM TabelaA
+WHERE id = 5;
+
+--9. uspjesno su promijenjene vrijednosti u dva reda
+UPDATE TabelaB
+SET fktabelaA = 4
+WHERE fktabelaA = 2;
+
+--10. uspjesno je dodano ogranicenje, obzirom da su sve do sada dodane vrijednosti bile 'tekst'
+ALTER TABLE TabelaA
+ADD CONSTRAINT cst CHECK (naziv LIKE 'tekst');
+
+--Provjera:
+SELECT SUM(id) FROM TabelaA;
+SELECT SUM(id) FROM TabelaB;
+SELECT SUM(id) FROM TabelaC;
+
+----------------------------------------------------------------------
+--Zadatak 3:
+truncate table TabelaC;
+truncate table TabelaB;
+truncate table TabelaA;
+
+CREATE SEQUENCE brojacA 
+START WITH 1 
+INCREMENT BY 1;
+CREATE SEQUENCE brojacB 
+START WITH 1 
+INCREMENT BY 1;
+CREATE SEQUENCE brojacC 
+START WITH 1 
+INCREMENT BY 1;
+SELECT * FROM tabelaa;
+
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (brojacA.NEXTVAL, 'tekst', null, null, 6.2);
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (brojacA.NEXTVAL, NULL, NULL, 3, 5.26);
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (brojacA.NEXTVAL, 'tekst', NULL,1, NULL);
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (brojacA.NEXTVAL, NULL, NULL, NULL, NULL);
+INSERT INTO TabelaA (id, naziv, datum, cijeliBroj, realniBroj)
+VALUES (brojacA.NEXTVAL, 'tekst', NULL, 16, 6.78);
+
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (brojacB.NEXTVAL, NULL,NULL, 1, NULL, 1);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (brojacB.NEXTVAL, NULL,NULL, 3, NULL, 1);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (brojacB.NEXTVAL, NULL,NULL, 6, NULL, 2);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (brojacB.NEXTVAL, NULL,NULL, 11, NULL, 2);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+VALUES (brojacB.NEXTVAL, NULL,NULL, 22, NULL, 3);
+
+INSERT INTO TabelaC (id, naziv, datum, cijelibroj, realnibroj, fktabelab)
+VALUES (brojacC.NEXTVAL, 'YES', NULL, 33, NULL, 4);
+INSERT INTO TabelaC (id, naziv, datum, cijelibroj, realnibroj, fktabelab)
+VALUES (brojacC.NEXTVAL, 'NO', NULL, 33, NULL, 2);
+INSERT INTO TabelaC (id, naziv, datum, cijelibroj, realnibroj, fktabelab)
+VALUES (brojacC.NEXTVAL, 'NO', NULL, 55, NULL, 1);
+
+SELECT * FROM tabelaa;
+SELECT * FROM tabelab;
+SELECT * FROM tabelac;
+SELECT * FROM tabelaabekap;
+
+
+CREATE OR REPLACE TRIGGER t1
+AFTER INSERT ON tabelab
+FOR EACH ROW
+DECLARE 
+   lv_realni  tabelaa.realnibroj%TYPE;
+BEGIN
+  
+   SELECT realnibroj
+   INTO lv_realni
+   FROM tabelaa
+   WHERE id = :NEW.fktabelaa;
+   
+   IF :NEW.cijelibroj < 50 THEN
+      lv_realni := lv_realni * 1.25;
+   ELSE
+      lv_realni := lv_realni * 0.75;
+   END IF;
+   UPDATE tabelaa
+   SET realnibroj = lv_realni
+   WHERE id = :NEW.fktabelaa;
+END t1;
+/
+
+create or replace trigger t2
+before insert or update on TabelaC
+for each row
+DECLARE
+  lv_max tabelab.cijelibroj%type;
+  lv_id tabelab.id%type;
+  lv_fktabelaa tabelab.fktabelaa%type;
+  lv_datum tabelab.datum%type;
+BEGIN
+  select max(cijelibroj)
+  into lv_max
+  from tabelab;
+  
+  select brojacB.NEXTVAL
+  into lv_id
+  from dual;
+  
+  select fktabelaa
+  into lv_fktabelaa
+  from tabelab
+  where id = :NEW.fktabelab;
+
+  lv_datum := sysdate;
+
+  INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, fktabelaa)
+  VALUES (lv_id, null, lv_datum, lv_max * 2, null, lv_fktabelaa);
+END t2;
+/
+
+CREATE SEQUENCE seq
+MINVALUE 1
+MAXVALUE 10
+START WITH 1
+INCREMENT BY 1
+CACHE 2
+CYCLE;
+
+CREATE TABLE TabelaABekap (
+    ID NUMBER NOT NULL,
+    NAZIV VARCHAR2(20),
+    DATUM DATE,
+    CIJELIBROJ NUMBER,
+    REALNIBROJ NUMBER,
+    CIJELIBROJB INTEGER,
+    SEKVENCA INTEGER,
+    CONSTRAINT TabelaABekap_pk PRIMARY KEY(ID)
+);
+
+CREATE OR REPLACE TRIGGER t3
+AFTER INSERT ON TabelaB
+FOR EACH ROW
+DECLARE
+  lv_id tabelaa.id%TYPE;
+  lv_naziv tabelaa.NAZIV%TYPE;
+  lv_datum tabelaa.DATUM%TYPE;
+  lv_cijelibroj tabelaa.CIJELIBROJ%TYPE;
+  lv_realni tabelaa.REALNIBROJ%TYPE;
+  lv_seq INTEGER;
+BEGIN
+  lv_seq := seq.NEXTVAL;
+  UPDATE TabelaABekap
+  SET CIJELIBROJB = CIJELIBROJB + :NEW.CIJELIBROJ,
+      SEKVENCA = lv_seq
+  WHERE ID = :NEW.FKTABELAA;
+  IF SQL%ROWCOUNT = 0 THEN
+    SELECT id, naziv, datum, cijelibroj, REALNIBROJ
+    INTO lv_id, lv_naziv, lv_datum, lv_cijelibroj, lv_realni
+    FROM tabelaa
+    WHERE id = :NEW.FKTABELAA;
+    INSERT INTO TabelaABekap(id, naziv, datum, cijelibroj, REALNIBROJ, cijelibrojB, sekvenca)
+    VALUES(lv_id, lv_naziv, lv_datum, lv_cijelibroj, lv_realni, :NEW.CIJELIBROJ, lv_seq);
+  END IF;
+END;
+/
+
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaA) VALUES (brojacB.nextval, null,
+null, 2, null, 1);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaA) VALUES (brojacB.nextval, null,
+null, 4, null, 2);
+INSERT INTO TabelaB (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaA) VALUES (brojacB.nextval, null,
+null, 8, null, 1);
+INSERT INTO TabelaC (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaB) VALUES (4, 'NO', null, 5, null, 3);
+INSERT INTO TabelaC (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaB) VALUES (5, 'YES', null, 7, null,
+3);
+INSERT INTO TabelaC (id, naziv, datum, cijeliBroj, realniBroj, FkTabelaB) VALUES (6, 'NO', null, 9, null, 2);
+UPDATE TabelaC SET cijeliBroj = 10 WHERE id = 2;
+DELETE FROM TabelaB WHERE id NOT IN (SELECT FkTabelaB FROM TabelaC);
+DELETE FROM TabelaA WHERE id IN (3, 4, 6);
+
+--Provjera:
+SELECT SUM(id*3 + cijeliBrojB*3) FROM TabelaABekap; 
+--Rezultat: 2031
+SELECT SUM(id*3 + cijeliBroj*3) FROM TabelaC; 
+--Rezultat: 420
+SELECT SUM(MOD(id,10)*3) FROM TabelaB;
+ --Rezultat: 30
+SELECT SUM(id + realniBroj)*10 FROM TabelaA; 
+--Rezultat: 264
+
+--Rezultati:
+SELECT SUM(id*7 + cijeliBrojB*7) FROM TabelaABekap;
+--Rezultat: 4739
+SELECT SUM(id*7 + cijeliBroj*7) FROM TabelaC;
+--Rezultat: 980
+SELECT SUM(MOD(id,10)*7) FROM TabelaB;
+--Rezultat: 70 
+SELECT SUM(id*5 + realniBroj)*10 FROM TabelaA;
+--Rezultat: 584
